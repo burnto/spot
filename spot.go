@@ -15,19 +15,19 @@ func usage() {
 	os.Exit(2)
 }
 
-func startProcess(args []string) *exec.Cmd {
-
+func startProcess(args []string) (*exec.Cmd, chan error) {
 	cmd := exec.Command(args[0], args[1:]...)
-
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-
 	if err := cmd.Start(); err != nil {
 		log.Fatal(err)
 	}
-
-	return cmd
+	done := make(chan error)
+	go func() {
+		done <- cmd.Wait()
+	}()
+	return cmd, done
 }
 
 func main() {
@@ -39,7 +39,7 @@ func main() {
 		usage()
 		os.Exit(2)
 	}
-	cmd := startProcess(args)
+	cmd, done := startProcess(args)
 
 	// Set up fsnotify
 	watcher, err := fsnotify.NewWatcher()
@@ -57,12 +57,18 @@ func main() {
 	// Process events
 	for {
 		select {
+		case err := <-done:
+			if err == nil {
+				os.Exit(0)
+			} else {
+				os.Exit(1)
+			}
 		case ev := <-watcher.Event:
-			log.Println("event:", ev)
+			log.Println("Detected", ev)
 			cmd.Process.Kill()
-			cmd = startProcess(args)
+			cmd, done = startProcess(args)
 		case err := <-watcher.Error:
-			log.Println("error:", err)
+			log.Println("Error:", err)
 		}
 	}
 }
