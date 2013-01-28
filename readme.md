@@ -3,9 +3,13 @@ Spot
 
 "See spot run"
 
-Spot is a dead simple, feature-free command for Go that watches your filesystem and (re)runs your command when a change is observed. It uses [fsnotify](https://github.com/howeyc/fsnotify).
+Spot is a stupidly simple, feature-free tool for watching your filesystem and (re)running your command when a change is observed. It uses [fsnotify](https://github.com/howeyc/fsnotify).
 
-If you need something beyond this dead simple, single-use reloading offered here, check out other monitor/exec tools that are far more featureful, such as [watchdog](https://github.com/gorakhargosh/watchdog) (Python) or [watchr](https://github.com/bevry/watchr/) (node.js). 
+Check out other monitor/exec tools that are far more featureful:
+
+* [watchdog](https://github.com/gorakhargosh/watchdog) (Python)
+* [watchr](https://github.com/bevry/watchr/) (node.js)
+* [devsrvr](https://bitbucket.org/liamstask/devsrvr) (Go)
 
 Install
 -------
