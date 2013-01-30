@@ -1,15 +1,15 @@
 Spot
 ====
 
-"See spot run"
-
-Spot is a stupidly simple, feature-free tool for watching your filesystem and (re)running your command when a change is observed. It uses [fsnotify](https://github.com/howeyc/fsnotify).
+Spot is a stupidly simple tool for watching your filesystem and (re)running your command when a change is observed. If the first argument is a .go file, it will build before executing.
 
 Check out other monitor/exec tools that are far more featureful:
 
 * [watchdog](https://github.com/gorakhargosh/watchdog) (Python)
 * [watchr](https://github.com/bevry/watchr/) (node.js)
 * [devsrvr](https://bitbucket.org/liamstask/devsrvr) (Go)
+
+Spot uses [fsnotify](https://github.com/howeyc/fsnotify).
 
 Install
 -------
