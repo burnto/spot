@@ -21,14 +21,19 @@ go get github.com/burnto/spot
 Usage
 -----
 
+You can supply either a go file or an executable, followed by any number of arguments.
+
 ```bash
-spot <command>
+spot <program.go> [args]...
+spot <executable> [args]...
 ```
+
+If the file is a go file, it will be built and then run.
 
 Any file creations, deletions, or modifications within the working directory will trigger a restart of the process. Example:
 
 ```bash
-spot go run my_serve.go
+spot my_serve.go
 ```
 
 License
