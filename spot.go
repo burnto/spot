@@ -67,7 +67,7 @@ func startProcess(args []string) *exec.Cmd {
 		if err != nil {
 			log.Fatal(err)
 		}
-		exe = exe[:-3]
+		exe = exe[:len(exe)-3]
 	}
 
 	// Set up fsnotify
