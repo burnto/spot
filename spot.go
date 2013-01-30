@@ -82,7 +82,7 @@ func startProcess(args []string) *exec.Cmd {
 		log.Fatal(err)
 	}
 
-	cmd = exec.Command(args[0], args[1:]...)
+	cmd = exec.Command(exe, args[1:]...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
