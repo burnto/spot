@@ -33,7 +33,6 @@ func main() {
 	// Process events
 	for {
 		cmd, _ := startProcess(args)
-		fmt.Println(cmd)
 		select {
 		case ev := <-watcher.Event:
 			log.Println("spotted", ev)
