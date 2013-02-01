@@ -30,22 +30,23 @@ func main() {
 		os.Exit(2)
 	}
 
-	cmd := startProcess(args)
-
 	// Process events
 	for {
+		cmd, _ := startProcess(args)
+		fmt.Println(cmd)
 		select {
 		case ev := <-watcher.Event:
 			log.Println("spotted", ev)
-			cmd.Process.Kill()
-			cmd = startProcess(args)
+			if cmd != nil {
+				cmd.Process.Kill()
+			}
 		case err := <-watcher.Error:
 			log.Println("error", err)
 		}
 	}
 }
 
-func startProcess(args []string) *exec.Cmd {
+func startProcess(args []string) (*exec.Cmd, error) {
 
 	if watcher != nil {
 		watcher.Close()
@@ -53,7 +54,7 @@ func startProcess(args []string) *exec.Cmd {
 	}
 
 	var cmd *exec.Cmd
-	var err error
+	var cmdErr, watcherErr error
 
 	// Build if it's a go file
 	exe := args[0]
@@ -63,32 +64,32 @@ func startProcess(args []string) *exec.Cmd {
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		err = cmd.Run()
-		if err != nil {
-			log.Fatal(err)
-		}
+		cmdErr = cmd.Run()
 		exe = exe[:len(exe)-3]
 	}
 
 	// Set up fsnotify
-	watcher, err = fsnotify.NewWatcher()
-	if err != nil {
-		log.Fatal(err)
+	watcher, watcherErr = fsnotify.NewWatcher()
+	if watcherErr != nil {
+		log.Panic(watcherErr)
 	}
 
 	// Watch the current directory
-	err = watcher.Watch(".")
-	if err != nil {
-		log.Fatal(err)
+	watcherErr = watcher.Watch(".")
+	if watcherErr != nil {
+		log.Panic(watcherErr)
+	}
+	if cmdErr != nil {
+		return nil, cmdErr
 	}
 
 	cmd = exec.Command(exe, args[1:]...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err = cmd.Start()
-	if err != nil {
-		log.Fatal(err)
+	cmdErr = cmd.Start()
+	if cmdErr != nil {
+		return nil, cmdErr
 	}
-	return cmd
+	return cmd, nil
 }
