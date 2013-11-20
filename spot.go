@@ -10,8 +10,6 @@ import (
 	"strings"
 )
 
-var watcher *fsnotify.Watcher
-
 func usage() {
 	fmt.Fprintf(os.Stderr, "usage: spot <command>\n")
 	flag.PrintDefaults()
@@ -19,8 +17,6 @@ func usage() {
 }
 
 func main() {
-	defer watcher.Close()
-
 	flag.Usage = usage
 	flag.Parse()
 
@@ -30,9 +26,24 @@ func main() {
 		os.Exit(2)
 	}
 
+	// Watch the current directory
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	err = watcher.Watch(".")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer watcher.Close()
+
 	// Process events
 	for {
-		cmd, _ := startProcess(args)
+		cmd, err := startProcess(args)
+		if err != nil {
+			log.Println(err)
+		}
+
 		select {
 		case ev := <-watcher.Event:
 			log.Println("spotted", ev)
@@ -46,49 +57,27 @@ func main() {
 }
 
 func startProcess(args []string) (*exec.Cmd, error) {
-
-	if watcher != nil {
-		watcher.Close()
-		watcher = nil
-	}
-
 	var cmd *exec.Cmd
-	var cmdErr, watcherErr error
 
 	// Build if it's a go file
 	exe := args[0]
 	if strings.HasSuffix(exe, ".go") {
 		log.Println("Building", exe)
 		cmd = exec.Command("go", "build", exe)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmdErr = cmd.Run()
-		exe = exe[:len(exe)-3]
-	}
-
-	// Set up fsnotify
-	watcher, watcherErr = fsnotify.NewWatcher()
-	if watcherErr != nil {
-		log.Panic(watcherErr)
-	}
-
-	// Watch the current directory
-	watcherErr = watcher.Watch(".")
-	if watcherErr != nil {
-		log.Panic(watcherErr)
-	}
-	if cmdErr != nil {
-		return nil, cmdErr
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+		err := cmd.Run()
+		if err != nil {
+			return nil, err
+		}
+		exe = exe[:len(exe)-len(".go")]
 	}
 
 	cmd = exec.Command(exe, args[1:]...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmdErr = cmd.Start()
-	if cmdErr != nil {
-		return nil, cmdErr
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	err := cmd.Start()
+	if err != nil {
+		return nil, err
 	}
+
 	return cmd, nil
 }
