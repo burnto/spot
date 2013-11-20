@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 func usage() {
@@ -56,7 +57,21 @@ func main() {
 
 		select {
 		case ev := <-watcher.Event:
-			log.Println("spotted", ev)
+			events := []*fsnotify.FileEvent{ev}
+			// spin for a moment to try to batch up other events
+			timeout := time.NewTimer(time.Millisecond * 50)
+		wait:
+			for {
+				select {
+				case ev := <-watcher.Event:
+					events = append(events, ev)
+				case err := <-watcher.Error:
+					log.Println("error", err)
+				case <-timeout.C:
+					break wait
+				}
+			}
+			log.Println("spotted", events)
 			if cmd != nil {
 				cmd.Process.Kill()
 			}
