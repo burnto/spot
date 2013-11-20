@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/howeyc/fsnotify"
+	"github.com/kr/fs"
 	"log"
 	"os"
 	"os/exec"
@@ -31,9 +32,18 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	err = watcher.Watch(".")
-	if err != nil {
-		log.Fatalln(err)
+
+	walker := fs.Walk(".")
+	for walker.Step() {
+		if err := walker.Err(); err != nil {
+			log.Fatalln(err)
+		}
+		if walker.Stat().IsDir() && !strings.HasPrefix(walker.Path(), "_") && !strings.HasPrefix(walker.Path(), ".") {
+			err = watcher.Watch(walker.Path())
+			if err != nil {
+				log.Fatalln(err)
+			}
+		}
 	}
 	defer watcher.Close()
 
