@@ -73,7 +73,10 @@ func main() {
 			}
 			log.Println("spotted", events)
 			if cmd != nil {
-				cmd.Process.Kill()
+				err := cmd.Process.Kill()
+				if err != nil {
+					log.Fatalln(err)
+				}
 			}
 		case err := <-watcher.Error:
 			log.Println("error", err)
