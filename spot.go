@@ -4,13 +4,14 @@ import (
 	"flag"
 	"fmt"
 	"github.com/howeyc/fsnotify"
+	"github.com/kr/fs"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+	"time"
 )
-
-var watcher *fsnotify.Watcher
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "usage: spot <command>\n")
@@ -19,8 +20,6 @@ func usage() {
 }
 
 func main() {
-	defer watcher.Close()
-
 	flag.Usage = usage
 	flag.Parse()
 
@@ -30,14 +29,64 @@ func main() {
 		os.Exit(2)
 	}
 
+	// Watch the current directory
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	walker := fs.Walk(".")
+	for walker.Step() {
+		if err := walker.Err(); err != nil {
+			log.Fatalln(err)
+		}
+		dir := filepath.Base(walker.Path())
+		if walker.Stat().IsDir() {
+			if dir != "." && (strings.HasPrefix(dir, "_") || strings.HasPrefix(dir, ".")) {
+				walker.SkipDir()
+				continue
+			}
+			err = watcher.Watch(walker.Path())
+			if err != nil {
+				log.Fatalln(err)
+			}
+		}
+	}
+	defer watcher.Close()
+
 	// Process events
 	for {
-		cmd, _ := startProcess(args)
+		cmd, err := startProcess(args)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
 		select {
 		case ev := <-watcher.Event:
-			log.Println("spotted", ev)
+			events := []*fsnotify.FileEvent{ev}
+			// spin for a moment to try to batch up other events
+			timeout := time.NewTimer(time.Millisecond * 50)
+		wait:
+			for {
+				select {
+				case ev := <-watcher.Event:
+					events = append(events, ev)
+				case err := <-watcher.Error:
+					log.Println("error", err)
+				case <-timeout.C:
+					break wait
+				}
+			}
+			log.Println("spotted", events)
 			if cmd != nil {
-				cmd.Process.Kill()
+				err := cmd.Process.Kill()
+				if err != nil {
+					log.Fatalln(err)
+				}
+				_, err = cmd.Process.Wait()
+				if err != nil {
+					log.Fatalln(err)
+				}
 			}
 		case err := <-watcher.Error:
 			log.Println("error", err)
@@ -46,49 +95,28 @@ func main() {
 }
 
 func startProcess(args []string) (*exec.Cmd, error) {
-
-	if watcher != nil {
-		watcher.Close()
-		watcher = nil
-	}
-
 	var cmd *exec.Cmd
-	var cmdErr, watcherErr error
 
 	// Build if it's a go file
 	exe := args[0]
 	if strings.HasSuffix(exe, ".go") {
 		log.Println("Building", exe)
 		cmd = exec.Command("go", "build", exe)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmdErr = cmd.Run()
-		exe = exe[:len(exe)-3]
-	}
-
-	// Set up fsnotify
-	watcher, watcherErr = fsnotify.NewWatcher()
-	if watcherErr != nil {
-		log.Panic(watcherErr)
-	}
-
-	// Watch the current directory
-	watcherErr = watcher.Watch(".")
-	if watcherErr != nil {
-		log.Panic(watcherErr)
-	}
-	if cmdErr != nil {
-		return nil, cmdErr
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+		err := cmd.Run()
+		if err != nil {
+			return nil, err
+		}
+		exe = exe[:len(exe)-len(".go")]
 	}
 
 	cmd = exec.Command(exe, args[1:]...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmdErr = cmd.Start()
-	if cmdErr != nil {
-		return nil, cmdErr
+	log.Println("Running", strings.Join(args, " "))
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	err := cmd.Start()
+	if err != nil {
+		return nil, err
 	}
+
 	return cmd, nil
 }
