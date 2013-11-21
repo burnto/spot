@@ -77,6 +77,10 @@ func main() {
 				if err != nil {
 					log.Fatalln(err)
 				}
+				err = cmd.Process.Wait()
+				if err != nil {
+					log.Fatalln(err)
+				}
 			}
 		case err := <-watcher.Error:
 			log.Println("error", err)
