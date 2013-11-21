@@ -101,7 +101,7 @@ func startProcess(args []string) (*exec.Cmd, error) {
 	// Build if it's a go file
 	exe := args[0]
 	if strings.HasSuffix(exe, ".go") {
-		target := path.Join(string(os.PathSeparator)+"tmp", "spotted-"+exe[:len(exe)-len(".go")])
+		target := path.Join(os.TempDir(), "spotted-"+exe[:len(exe)-len(".go")])
 
 		log.Println("Building", exe)
 		cmd = exec.Command("go", "build", "-o", target, exe)
