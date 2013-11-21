@@ -77,7 +77,7 @@ func main() {
 				if err != nil {
 					log.Fatalln(err)
 				}
-				err = cmd.Process.Wait()
+				_, err = cmd.Process.Wait()
 				if err != nil {
 					log.Fatalln(err)
 				}
