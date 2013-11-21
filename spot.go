@@ -52,7 +52,7 @@ func main() {
 	for {
 		cmd, err := startProcess(args)
 		if err != nil {
-			log.Println(err)
+			log.Fatalln(err)
 		}
 
 		select {
