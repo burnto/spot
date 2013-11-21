@@ -98,6 +98,7 @@ func startProcess(args []string) (*exec.Cmd, error) {
 	}
 
 	cmd = exec.Command(exe, args[1:]...)
+	log.Println("Running", strings.Join(args, " "))
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	err := cmd.Start()
 	if err != nil {
