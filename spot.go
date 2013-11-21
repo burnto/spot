@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -39,7 +40,12 @@ func main() {
 		if err := walker.Err(); err != nil {
 			log.Fatalln(err)
 		}
-		if walker.Stat().IsDir() && !strings.HasPrefix(walker.Path(), "_") && !strings.HasPrefix(walker.Path(), ".") {
+		dir := filepath.Base(walker.Path())
+		if walker.Stat().IsDir() {
+			if dir != "." && (strings.HasPrefix(dir, "_") || strings.HasPrefix(dir, ".")) {
+				walker.SkipDir()
+				continue
+			}
 			err = watcher.Watch(walker.Path())
 			if err != nil {
 				log.Fatalln(err)
